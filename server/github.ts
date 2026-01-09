@@ -42,12 +42,18 @@ export function parseRepoUrl(url: string): { owner: string; repo: string } | nul
 /**
  * Fetch repository information from GitHub API
  */
-export async function fetchRepository(owner: string, repo: string): Promise<GitHubRepo> {
+export async function fetchRepository(owner: string, repo: string, token?: string): Promise<GitHubRepo> {
+  const headers: Record<string, string> = {
+    'Accept': 'application/vnd.github.v3+json',
+    'User-Agent': 'GitHub-Stargazers-Map',
+  };
+  
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
   const response = await axios.get<GitHubRepo>(`${GITHUB_API_BASE}/repos/${owner}/${repo}`, {
-    headers: {
-      'Accept': 'application/vnd.github.v3+json',
-      'User-Agent': 'GitHub-Stargazers-Map',
-    },
+    headers,
   });
 
   return response.data;
@@ -56,14 +62,20 @@ export async function fetchRepository(owner: string, repo: string): Promise<GitH
 /**
  * Fetch user details including location
  */
-export async function fetchUserDetail(username: string): Promise<GitHubUserDetail> {
+export async function fetchUserDetail(username: string, token?: string): Promise<GitHubUserDetail> {
+  const headers: Record<string, string> = {
+    'Accept': 'application/vnd.github.v3+json',
+    'User-Agent': 'GitHub-Stargazers-Map',
+  };
+  
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
   const response = await axios.get<GitHubUserDetail>(
     `${GITHUB_API_BASE}/users/${username}`,
     {
-      headers: {
-        'Accept': 'application/vnd.github.v3+json',
-        'User-Agent': 'GitHub-Stargazers-Map',
-      },
+      headers,
     }
   );
   return response.data;
@@ -76,7 +88,8 @@ export async function fetchUserDetail(username: string): Promise<GitHubUserDetai
 export async function* fetchStargazers(
   owner: string,
   repo: string,
-  maxCount?: number
+  maxCount?: number,
+  token?: string
 ): AsyncGenerator<GitHubUser[], void, unknown> {
   let page = 1;
   let totalFetched = 0;
@@ -88,13 +101,19 @@ export async function* fetchStargazers(
     if (limit <= 0) break;
 
     try {
+      const headers: Record<string, string> = {
+        'Accept': 'application/vnd.github.v3+json',
+        'User-Agent': 'GitHub-Stargazers-Map',
+      };
+      
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
       const response = await axios.get<GitHubUser[]>(
         `${GITHUB_API_BASE}/repos/${owner}/${repo}/stargazers`,
         {
-          headers: {
-            'Accept': 'application/vnd.github.v3+json',
-            'User-Agent': 'GitHub-Stargazers-Map',
-          },
+          headers,
           params: {
             page,
             per_page: limit,
@@ -128,16 +147,22 @@ export async function* fetchStargazers(
 /**
  * Check GitHub API rate limit status
  */
-export async function checkRateLimit(): Promise<{
+export async function checkRateLimit(token?: string): Promise<{
   limit: number;
   remaining: number;
   reset: Date;
 }> {
+  const headers: Record<string, string> = {
+    'Accept': 'application/vnd.github.v3+json',
+    'User-Agent': 'GitHub-Stargazers-Map',
+  };
+  
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
   const response = await axios.get(`${GITHUB_API_BASE}/rate_limit`, {
-    headers: {
-      'Accept': 'application/vnd.github.v3+json',
-      'User-Agent': 'GitHub-Stargazers-Map',
-    },
+    headers,
   });
 
   const { limit, remaining, reset } = response.data.rate;

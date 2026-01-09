@@ -1,11 +1,13 @@
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
-import { publicProcedure, router } from "./_core/trpc";
+import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import { analyzeRepository } from "./analyzer";
-import { getRepositoryByFullName, getCountryStatsByRepositoryId } from "./db";
+import { getRepositoryByFullName, getCountryStatsByRepositoryId, getDb } from "./db";
 import { checkRateLimit } from "./github";
+import { users } from "../drizzle/schema";
+import { eq } from "drizzle-orm";
 
 export const appRouter = router({
   system: systemRouter,
@@ -20,6 +22,58 @@ export const appRouter = router({
     }),
   }),
 
+  settings: router({
+    /**
+     * Get user's GitHub token
+     */
+    getGithubToken: protectedProcedure.query(async ({ ctx }) => {
+      return {
+        hasToken: !!ctx.user.githubToken,
+        token: ctx.user.githubToken ? '***' + ctx.user.githubToken.slice(-4) : null,
+      };
+    }),
+
+    /**
+     * Save user's GitHub token
+     */
+    saveGithubToken: protectedProcedure
+      .input(
+        z.object({
+          token: z.string().min(1, 'Token is required'),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        const db = await getDb();
+        if (!db) {
+          throw new Error('Database not available');
+        }
+
+        await db
+          .update(users)
+          .set({ githubToken: input.token })
+          .where(eq(users.id, ctx.user.id));
+
+        return { success: true };
+      }),
+
+    /**
+     * Delete user's GitHub token
+     */
+    deleteGithubToken: protectedProcedure.mutation(async ({ ctx }) => {
+      const db = await getDb();
+      if (!db) {
+        throw new Error('Database not available');
+      }
+
+      await db
+        .update(users)
+        .set({ githubToken: null })
+        .where(eq(users.id, ctx.user.id));
+
+      return { success: true };
+    }),
+  }),
+
   stargazers: router({
     /**
      * Analyze a GitHub repository's stargazers geographic distribution
@@ -31,8 +85,9 @@ export const appRouter = router({
           maxStargazers: z.number().min(1).max(5000).default(1000),
         })
       )
-      .mutation(async ({ input }) => {
-        const result = await analyzeRepository(input.repoUrl, undefined, input.maxStargazers);
+      .mutation(async ({ input, ctx }) => {
+        const githubToken = ctx.user?.githubToken || undefined;
+        const result = await analyzeRepository(input.repoUrl, undefined, input.maxStargazers, githubToken);
         return result;
       }),
 
@@ -72,9 +127,10 @@ export const appRouter = router({
     /**
      * Check GitHub API rate limit status
      */
-    checkRateLimit: publicProcedure.query(async () => {
+    checkRateLimit: publicProcedure.query(async ({ ctx }) => {
       try {
-        const rateLimit = await checkRateLimit();
+        const githubToken = ctx.user?.githubToken || undefined;
+        const rateLimit = await checkRateLimit(githubToken);
         return {
           success: true,
           limit: rateLimit.limit,

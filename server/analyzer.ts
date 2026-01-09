@@ -35,7 +35,8 @@ export interface AnalysisResult {
 export async function analyzeRepository(
   repoUrl: string,
   onProgress?: (progress: AnalysisProgress) => void,
-  maxStargazers: number = 1000 // Limit for MVP
+  maxStargazers: number = 1000, // Limit for MVP
+  githubToken?: string
 ): Promise<AnalysisResult> {
   // Parse repository URL
   const parsed = parseRepoUrl(repoUrl);
@@ -88,7 +89,7 @@ export async function analyzeRepository(
     message: 'Fetching repository information...',
   });
 
-  const repoInfo = await fetchRepository(owner, repo);
+  const repoInfo = await fetchRepository(owner, repo, githubToken);
   const actualStarCount = repoInfo.stargazers_count;
   const targetCount = Math.min(maxStargazers, actualStarCount);
 
@@ -104,7 +105,7 @@ export async function analyzeRepository(
   const stargazerLogins: string[] = [];
   
   // First, get the list of stargazer usernames
-  for await (const batch of fetchStargazers(owner, repo, targetCount)) {
+  for await (const batch of fetchStargazers(owner, repo, targetCount, githubToken)) {
     stargazerLogins.push(...batch.map(u => u.login));
     onProgress?.({
       stage: 'fetching',
@@ -125,7 +126,7 @@ export async function analyzeRepository(
   for (let i = 0; i < stargazerLogins.length; i++) {
     const username = stargazerLogins[i]!;
     try {
-      const userDetail = await fetchUserDetail(username);
+      const userDetail = await fetchUserDetail(username, githubToken);
       stargazers.push({
         login: userDetail.login,
         location: userDetail.location,

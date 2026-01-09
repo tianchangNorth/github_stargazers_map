@@ -37,3 +37,24 @@
 ## 新问题
 - [x] 诊断地图上没有显示 star 数据的原因
 - [x] 修复数据处理和显示逻辑
+
+## 用户反馈
+- [x] 测试 tianchangNorth/pocket-mocker 仓库分析功能
+- [x] 验证地图数据显示是否正常
+
+## 用户新需求
+- [x] 修改默认分析数量，支持分析完整的 stargazers 列表
+- [x] 测试 pocket-mocker 仓库的完整 508 个 stargazers 分析
+
+## 新发现的问题
+- [x] 诊断为什么 508 个 stargazers 全部显示为 unknown locations
+- [x] 检查 Google Maps Geocoding API 是否被正确调用
+- [x] 验证 location 数据是否正确从 GitHub API 获取
+
+## GitHub Token 功能
+- [x] 扩展数据库 schema 添加 githubToken 字段
+- [x] 实现后端 API 用于保存/获取 GitHub token
+- [x] 修改 GitHub API 调用逻辑使用用户 token
+- [x] 实现前端设置界面
+- [x] 显示 GitHub API rate limit 状态
+- [x] 测试完整功能

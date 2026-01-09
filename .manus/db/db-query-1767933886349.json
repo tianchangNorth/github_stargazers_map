@@ -1,0 +1,70 @@
+{
+  "query": "SELECT locationText, countryCode, countryName, createdAt FROM locationCache ORDER BY createdAt DESC LIMIT 20",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 2Evcm55M7vi2UoF.root --database kvPNre5VKYarGAvkXmumC4 --execute SELECT locationText, countryCode, countryName, createdAt FROM locationCache ORDER BY createdAt DESC LIMIT 20",
+  "rows": [
+    {
+      "locationText": "europe",
+      "countryCode": "NULL",
+      "countryName": "NULL",
+      "createdAt": "2026-01-09 04:31:05"
+    },
+    {
+      "locationText": "san mateo california",
+      "countryCode": "US",
+      "countryName": "United States",
+      "createdAt": "2026-01-09 04:31:04"
+    },
+    {
+      "locationText": "mexico city",
+      "countryCode": "MX",
+      "countryName": "Mexico",
+      "createdAt": "2026-01-09 04:31:03"
+    },
+    {
+      "locationText": "santa monica,ca",
+      "countryCode": "US",
+      "countryName": "United States",
+      "createdAt": "2026-01-09 04:31:02"
+    },
+    {
+      "locationText": "gmt +/- 8",
+      "countryCode": "NULL",
+      "countryName": "NULL",
+      "createdAt": "2026-01-09 04:30:18"
+    },
+    {
+      "locationText": "frederick, co",
+      "countryCode": "US",
+      "countryName": "United States",
+      "createdAt": "2026-01-09 04:30:17"
+    },
+    {
+      "locationText": "places",
+      "countryCode": "NULL",
+      "countryName": "NULL",
+      "createdAt": "2026-01-09 04:30:16"
+    },
+    {
+      "locationText": "san francisco",
+      "countryCode": "US",
+      "countryName": "United States",
+      "createdAt": "2026-01-09 04:30:16"
+    },
+    {
+      "locationText": "unknown location xyz",
+      "countryCode": "NULL",
+      "countryName": "NULL",
+      "createdAt": "2026-01-09 03:32:19"
+    },
+    {
+      "locationText": "san francisco, ca",
+      "countryCode": "US",
+      "countryName": "United States",
+      "createdAt": "2026-01-09 03:32:18"
+    }
+  ],
+  "messages": [],
+  "stdout": "locationText\tcountryCode\tcountryName\tcreatedAt\neurope\tNULL\tNULL\t2026-01-09 04:31:05\nsan mateo california\tUS\tUnited States\t2026-01-09 04:31:04\nmexico city\tMX\tMexico\t2026-01-09 04:31:03\nsanta monica,ca\tUS\tUnited States\t2026-01-09 04:31:02\ngmt +/- 8\tNULL\tNULL\t2026-01-09 04:30:18\nfrederick, co\tUS\tUnited States\t2026-01-09 04:30:17\nplaces\tNULL\tNULL\t2026-01-09 04:30:16\nsan francisco\tUS\tUnited States\t2026-01-09 04:30:16\nunknown location xyz\tNULL\tNULL\t2026-01-09 03:32:19\nsan francisco, ca\tUS\tUnited States\t2026-01-09 03:32:18\n",
+  "stderr": "",
+  "execution_time_ms": 1497
+}

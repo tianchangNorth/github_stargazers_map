@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Github, Loader2, MapPin, Users, AlertCircle } from 'lucide-react';
+import { Link } from 'wouter';
 import WorldMap, { CountryData } from '@/components/WorldMap';
 import { toast } from 'sonner';
 
@@ -59,15 +60,24 @@ export default function Home() {
       {/* Header */}
       <header className="border-b border-border/50 backdrop-blur-sm sticky top-0 z-10">
         <div className="container py-6">
-          <div className="flex items-center gap-3">
-            <Github className="h-8 w-8 text-primary" />
-            <h1 className="text-3xl font-bold neon-glow-pink">
-              GitHub Stargazers Map
-            </h1>
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="flex items-center gap-3">
+                <Github className="h-8 w-8 text-primary" />
+                <h1 className="text-3xl font-bold neon-glow-pink">
+                  GitHub Stargazers Map
+                </h1>
+              </div>
+              <p className="mt-2 text-muted-foreground">
+                Visualize the geographic distribution of your repository's stargazers
+              </p>
+            </div>
+            <Link href="/settings">
+              <Button variant="outline" size="sm">
+                Settings
+              </Button>
+            </Link>
           </div>
-          <p className="mt-2 text-muted-foreground">
-            Visualize the geographic distribution of your repository's stargazers
-          </p>
         </div>
       </header>
 
