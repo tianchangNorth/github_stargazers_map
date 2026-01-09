@@ -49,14 +49,20 @@ export async function fetchRepository(owner: string, repo: string, token?: strin
   };
   
   if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
+    headers['Authorization'] = `token ${token}`;
   }
 
-  const response = await axios.get<GitHubRepo>(`${GITHUB_API_BASE}/repos/${owner}/${repo}`, {
-    headers,
-  });
-
-  return response.data;
+  try {
+    const response = await axios.get<GitHubRepo>(`${GITHUB_API_BASE}/repos/${owner}/${repo}`, {
+      headers,
+    });
+    return response.data;
+  } catch (error) {
+    if (axios.isAxiosError(error) && error.response?.status === 403) {
+      throw new Error('GitHub API access denied (403). Your token may be invalid or rate limit exceeded. Please check Settings.');
+    }
+    throw error;
+  }
 }
 
 /**
@@ -69,16 +75,23 @@ export async function fetchUserDetail(username: string, token?: string): Promise
   };
   
   if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
+    headers['Authorization'] = `token ${token}`;
   }
 
-  const response = await axios.get<GitHubUserDetail>(
-    `${GITHUB_API_BASE}/users/${username}`,
-    {
-      headers,
+  try {
+    const response = await axios.get<GitHubUserDetail>(
+      `${GITHUB_API_BASE}/users/${username}`,
+      {
+        headers,
+      }
+    );
+    return response.data;
+  } catch (error) {
+    if (axios.isAxiosError(error) && error.response?.status === 403) {
+      throw new Error('GitHub API access denied (403). Your token may be invalid or rate limit exceeded. Please check Settings.');
     }
-  );
-  return response.data;
+    throw error;
+  }
 }
 
 /**
@@ -107,7 +120,7 @@ export async function* fetchStargazers(
       };
       
       if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
+        headers['Authorization'] = `token ${token}`;
       }
 
       const response = await axios.get<GitHubUser[]>(
@@ -136,8 +149,8 @@ export async function* fetchStargazers(
       await new Promise(resolve => setTimeout(resolve, RATE_LIMIT_DELAY));
     } catch (error) {
       if (axios.isAxiosError(error) && error.response?.status === 403) {
-        // Rate limit exceeded
-        throw new Error('GitHub API rate limit exceeded. Please try again later.');
+        // Rate limit exceeded or invalid token
+        throw new Error('GitHub API access denied (403). Your token may be invalid or rate limit exceeded. Please check Settings.');
       }
       throw error;
     }
@@ -158,7 +171,7 @@ export async function checkRateLimit(token?: string): Promise<{
   };
   
   if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
+    headers['Authorization'] = `token ${token}`;
   }
 
   const response = await axios.get(`${GITHUB_API_BASE}/rate_limit`, {

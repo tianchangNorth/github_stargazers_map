@@ -146,6 +146,14 @@ export async function analyzeRepository(
         await new Promise(resolve => setTimeout(resolve, 100));
       }
     } catch (error) {
+      // Check if it's a 403 error (likely rate limit or auth issue)
+      if ((error as any)?.response?.status === 403) {
+        console.error('GitHub API returned 403 Forbidden. This usually means:');
+        console.error('1. Rate limit exceeded (60/hour without token, 5000/hour with token)');
+        console.error('2. Invalid GitHub token (check Settings page)');
+        console.error('3. Token lacks required permissions');
+        throw new Error('GitHub API access denied (403). Please check your GitHub token in Settings or wait for rate limit reset.');
+      }
       console.error(`Failed to fetch details for ${username}:`, error);
       // Add user without location if fetch fails
       stargazers.push({
