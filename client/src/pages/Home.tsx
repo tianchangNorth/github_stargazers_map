@@ -8,6 +8,7 @@ import { Progress } from '@/components/ui/progress';
 import { Github, Loader2, MapPin, Users, AlertCircle, X } from 'lucide-react';
 import { Link } from 'wouter';
 import WorldMap, { CountryData } from '@/components/WorldMap';
+import CountryList from '@/components/CountryList';
 import { toast } from 'sonner';
 
 export default function Home() {
@@ -285,43 +286,45 @@ export default function Home() {
                 </CardContent>
               </Card>
 
-              {/* Country Breakdown */}
+              {/* Detailed Statistics */}
               {analysisResult.countryDistribution.length > 0 && (
                 <Card className="border-secondary/50 bg-card/50 backdrop-blur-sm">
                   <CardHeader>
-                    <CardTitle className="text-xl">Country Breakdown</CardTitle>
-                    <CardDescription>Top countries by stargazer count</CardDescription>
+                    <CardTitle className="text-xl neon-glow-cyan">Distribution Statistics</CardTitle>
+                    <CardDescription>Detailed geographic coverage analysis</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-3">
-                      {analysisResult.countryDistribution.slice(0, 10).map((country, index) => (
-                        <div key={country.countryCode} className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <span className="text-sm font-medium text-muted-foreground w-6">
-                              #{index + 1}
-                            </span>
-                            <span className="font-medium">
-                              {country.countryName} ({country.countryCode})
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-3">
-                            <div className="w-32 h-2 bg-secondary/20 rounded-full overflow-hidden">
-                              <div
-                                className="h-full bg-gradient-to-r from-primary to-secondary"
-                                style={{
-                                  width: `${(country.count / analysisResult.countryDistribution[0].count) * 100}%`,
-                                }}
-                              />
-                            </div>
-                            <span className="font-bold text-primary w-12 text-right">
-                              {country.count}
-                            </span>
-                          </div>
-                        </div>
-                      ))}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="space-y-1">
+                        <p className="text-xs text-muted-foreground">Total Countries</p>
+                        <p className="text-2xl font-bold text-primary">{analysisResult.countryDistribution.length}</p>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-xs text-muted-foreground">Known Locations</p>
+                        <p className="text-2xl font-bold text-secondary">
+                          {(analysisResult.analyzedCount - analysisResult.unknownCount).toLocaleString()}
+                        </p>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-xs text-muted-foreground">Coverage Rate</p>
+                        <p className="text-2xl font-bold text-cyan-400">
+                          {(((analysisResult.analyzedCount - analysisResult.unknownCount) / analysisResult.analyzedCount) * 100).toFixed(1)}%
+                        </p>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-xs text-muted-foreground">Avg per Country</p>
+                        <p className="text-2xl font-bold text-pink-400">
+                          {((analysisResult.analyzedCount - analysisResult.unknownCount) / analysisResult.countryDistribution.length).toFixed(1)}
+                        </p>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
+              )}
+
+              {/* Country Breakdown with Search and Sort */}
+              {analysisResult.countryDistribution.length > 0 && (
+                <CountryList countries={analysisResult.countryDistribution} />
               )}
             </>
           )}
