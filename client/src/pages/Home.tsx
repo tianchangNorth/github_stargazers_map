@@ -64,15 +64,15 @@ export default function Home() {
     }
   }, [getAnalysisQuery.data]);
 
-  // Poll task status
+  // Poll task status using tRPC
+  const utils = trpc.useUtils();
+  
   useEffect(() => {
     if (!taskId) return;
 
     const interval = setInterval(async () => {
       try {
-        const response = await fetch(`/api/trpc/stargazers.getTaskStatus?input=${encodeURIComponent(JSON.stringify({ taskId }))}`);
-        const result = await response.json();
-        const status = result.result?.data;
+        const status = await utils.client.stargazers.getTaskStatus.query({ taskId });
 
         if (status) {
           setTaskStatus(status);
@@ -98,7 +98,7 @@ export default function Home() {
     }, 2000); // Poll every 2 seconds
 
     return () => clearInterval(interval);
-  }, [taskId]);
+  }, [taskId, utils]);
 
   const handleAnalyze = async () => {
     if (!repoUrl.trim()) {
