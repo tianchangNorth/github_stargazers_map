@@ -82,7 +82,7 @@ export const appRouter = router({
       .input(
         z.object({
           repoUrl: z.string().min(1, 'Repository URL is required'),
-          maxStargazers: z.number().min(1).max(5000).default(1000),
+          maxStargazers: z.number().min(1).max(10000).default(10000),
         })
       )
       .mutation(async ({ input, ctx }) => {
