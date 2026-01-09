@@ -73,3 +73,29 @@ export const locationCache = mysqlTable("locationCache", {
 
 export type LocationCache = typeof locationCache.$inferSelect;
 export type InsertLocationCache = typeof locationCache.$inferInsert;
+
+/**
+ * Analysis tasks
+ * Tracks background analysis jobs with progress and status
+ */
+export const analysisTasks = mysqlTable("analysisTasks", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId"), // NULL for anonymous users
+  repoUrl: varchar("repoUrl", { length: 512 }).notNull(),
+  fullName: varchar("fullName", { length: 255 }).notNull(),
+  maxStargazers: int("maxStargazers").notNull(),
+  status: mysqlEnum("status", ["pending", "running", "completed", "failed", "cancelled"]).default("pending").notNull(),
+  progress: int("progress").default(0).notNull(), // 0-100
+  currentStep: text("currentStep"), // e.g., "Analyzing stargazer 45/100"
+  errorMessage: text("errorMessage"),
+  repositoryId: int("repositoryId"), // Set when completed
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  completedAt: timestamp("completedAt"),
+}, (table) => ({
+  userIdIdx: index("userId_idx").on(table.userId),
+  statusIdx: index("status_idx").on(table.status),
+}));
+
+export type AnalysisTask = typeof analysisTasks.$inferSelect;
+export type InsertAnalysisTask = typeof analysisTasks.$inferInsert;

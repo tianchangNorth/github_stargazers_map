@@ -4,6 +4,7 @@ import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import { analyzeRepository } from "./analyzer";
+import { createTask, getTaskStatus, cancelTask } from "./taskQueue";
 import { getRepositoryByFullName, getCountryStatsByRepositoryId, getDb } from "./db";
 import { checkRateLimit } from "./github";
 import { users } from "../drizzle/schema";
@@ -77,6 +78,7 @@ export const appRouter = router({
   stargazers: router({
     /**
      * Analyze a GitHub repository's stargazers geographic distribution
+     * Creates a background task for large repositories
      */
     analyze: publicProcedure
       .input(
@@ -86,9 +88,45 @@ export const appRouter = router({
         })
       )
       .mutation(async ({ input, ctx }) => {
-        const githubToken = ctx.user?.githubToken || undefined;
-        const result = await analyzeRepository(input.repoUrl, undefined, input.maxStargazers, githubToken);
-        return result;
+        // Parse repo URL to get fullName
+        const match = input.repoUrl.match(/github\.com\/([^\/]+)\/([^\/]+)/);
+        if (!match) {
+          throw new Error('Invalid GitHub repository URL');
+        }
+        const fullName = `${match[1]}/${match[2]}`;
+
+        // Create background task
+        const taskId = await createTask({
+          userId: ctx.user?.id || null,
+          repoUrl: input.repoUrl,
+          fullName,
+          maxStargazers: input.maxStargazers,
+        });
+
+        return { taskId };
+      }),
+
+    /**
+     * Get analysis task status
+     */
+    getTaskStatus: publicProcedure
+      .input(z.object({ taskId: z.number() }))
+      .query(async ({ input }) => {
+        const task = await getTaskStatus(input.taskId);
+        if (!task) {
+          throw new Error('Task not found');
+        }
+        return task;
+      }),
+
+    /**
+     * Cancel an analysis task
+     */
+    cancelTask: publicProcedure
+      .input(z.object({ taskId: z.number() }))
+      .mutation(async ({ input }) => {
+        await cancelTask(input.taskId);
+        return { success: true };
       }),
 
     /**
