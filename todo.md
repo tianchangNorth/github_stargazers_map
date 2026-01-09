@@ -30,3 +30,6 @@
 - [x] 优化大量 stargazers 的处理性能
 - [x] 测试缓存和 rate limit 功能
 - [x] 优化前端加载和渲染性能
+
+## Bug 修复
+- [x] 修复 ECharts 世界地图 JSON 加载失败问题

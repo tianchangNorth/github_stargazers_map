@@ -26,9 +26,14 @@ export default function WorldMap({ data, loading }: WorldMapProps) {
 
     const chart = chartInstance.current;
 
-    // Register world map
-    fetch('https://cdn.jsdelivr.net/npm/echarts@5/map/json/world.json')
-      .then(response => response.json())
+    // Register world map - using local file to avoid CDN issues
+    fetch('/world.json')
+      .then(response => {
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+      })
       .then(worldJson => {
         echarts.registerMap('world', worldJson);
 
