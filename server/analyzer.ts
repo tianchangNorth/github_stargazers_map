@@ -1,0 +1,213 @@
+import { parseRepoUrl, fetchRepository, fetchStargazers, GitHubUser } from './github';
+import { parseLocationToCountry, CountryInfo } from './geocoding';
+import {
+  getRepositoryByFullName,
+  createRepository,
+  updateRepository,
+  createCountryStats,
+  deleteCountryStatsByRepositoryId,
+} from './db';
+
+export interface AnalysisProgress {
+  stage: 'fetching' | 'analyzing' | 'complete';
+  processed: number;
+  total: number;
+  message: string;
+}
+
+export interface AnalysisResult {
+  repositoryId: number;
+  fullName: string;
+  url: string;
+  starCount: number;
+  analyzedCount: number;
+  unknownCount: number;
+  countryDistribution: Array<{
+    countryCode: string;
+    countryName: string;
+    count: number;
+  }>;
+}
+
+/**
+ * Analyze a GitHub repository's stargazers geographic distribution
+ */
+export async function analyzeRepository(
+  repoUrl: string,
+  onProgress?: (progress: AnalysisProgress) => void,
+  maxStargazers: number = 1000 // Limit for MVP
+): Promise<AnalysisResult> {
+  // Parse repository URL
+  const parsed = parseRepoUrl(repoUrl);
+  if (!parsed) {
+    throw new Error('Invalid GitHub repository URL');
+  }
+
+  const { owner, repo } = parsed;
+  const fullName = `${owner}/${repo}`;
+
+  // Check if repository was recently analyzed (cache)
+  const existing = await getRepositoryByFullName(fullName);
+  if (existing) {
+    const cacheAge = Date.now() - existing.updatedAt.getTime();
+    const cacheMaxAge = 24 * 60 * 60 * 1000; // 24 hours
+
+    if (cacheAge < cacheMaxAge) {
+      // Return cached result
+      onProgress?.({
+        stage: 'complete',
+        processed: existing.analyzedCount,
+        total: existing.analyzedCount,
+        message: 'Using cached analysis result',
+      });
+
+      const db = await import('./db');
+      const stats = await db.getCountryStatsByRepositoryId(existing.id);
+
+      return {
+        repositoryId: existing.id,
+        fullName: existing.fullName,
+        url: existing.url,
+        starCount: existing.starCount,
+        analyzedCount: existing.analyzedCount,
+        unknownCount: existing.unknownCount,
+        countryDistribution: stats.map((s: { countryCode: string; countryName: string; count: number }) => ({
+          countryCode: s.countryCode,
+          countryName: s.countryName,
+          count: s.count,
+        })),
+      };
+    }
+  }
+
+  // Fetch repository info
+  onProgress?.({
+    stage: 'fetching',
+    processed: 0,
+    total: 0,
+    message: 'Fetching repository information...',
+  });
+
+  const repoInfo = await fetchRepository(owner, repo);
+  const actualStarCount = repoInfo.stargazers_count;
+  const targetCount = Math.min(maxStargazers, actualStarCount);
+
+  // Fetch stargazers
+  onProgress?.({
+    stage: 'fetching',
+    processed: 0,
+    total: targetCount,
+    message: 'Fetching stargazers...',
+  });
+
+  const stargazers: GitHubUser[] = [];
+  for await (const batch of fetchStargazers(owner, repo, targetCount)) {
+    stargazers.push(...batch);
+    onProgress?.({
+      stage: 'fetching',
+      processed: stargazers.length,
+      total: targetCount,
+      message: `Fetched ${stargazers.length} of ${targetCount} stargazers...`,
+    });
+  }
+
+  // Analyze locations
+  onProgress?.({
+    stage: 'analyzing',
+    processed: 0,
+    total: stargazers.length,
+    message: 'Analyzing locations...',
+  });
+
+  const countryMap = new Map<string, { code: string; name: string; count: number }>();
+  let unknownCount = 0;
+  let processed = 0;
+
+  for (const user of stargazers) {
+    if (!user.location || user.location.trim() === '') {
+      unknownCount++;
+    } else {
+      const country = await parseLocationToCountry(user.location);
+      if (country) {
+        const existing = countryMap.get(country.code);
+        if (existing) {
+          existing.count++;
+        } else {
+          countryMap.set(country.code, {
+            code: country.code,
+            name: country.name,
+            count: 1,
+          });
+        }
+      } else {
+        unknownCount++;
+      }
+    }
+
+    processed++;
+    if (processed % 10 === 0 || processed === stargazers.length) {
+      onProgress?.({
+        stage: 'analyzing',
+        processed,
+        total: stargazers.length,
+        message: `Analyzed ${processed} of ${stargazers.length} locations...`,
+      });
+    }
+
+    // Small delay to avoid overwhelming the geocoding API
+    if (user.location && user.location.trim() !== '' && processed < stargazers.length) {
+      await new Promise(resolve => setTimeout(resolve, 50));
+    }
+  }
+
+  // Save to database
+  const repositoryData = {
+    fullName,
+    url: repoUrl,
+    starCount: actualStarCount,
+    analyzedCount: stargazers.length,
+    unknownCount,
+  };
+
+  let repositoryId: number;
+  if (existing) {
+    await updateRepository(existing.id, repositoryData);
+    await deleteCountryStatsByRepositoryId(existing.id);
+    repositoryId = existing.id;
+  } else {
+    const result = await createRepository(repositoryData);
+    repositoryId = Number((result as any).insertId);
+  }
+
+  const countryStats = Array.from(countryMap.values()).map(country => ({
+    repositoryId,
+    countryCode: country.code,
+    countryName: country.name,
+    count: country.count,
+  }));
+
+  if (countryStats.length > 0) {
+    await createCountryStats(countryStats);
+  }
+
+  onProgress?.({
+    stage: 'complete',
+    processed: stargazers.length,
+    total: stargazers.length,
+    message: 'Analysis complete!',
+  });
+
+  return {
+    repositoryId,
+    fullName,
+    url: repoUrl,
+    starCount: actualStarCount,
+    analyzedCount: stargazers.length,
+    unknownCount,
+    countryDistribution: countryStats.map(s => ({
+      countryCode: s.countryCode,
+      countryName: s.countryName,
+      count: s.count,
+    })),
+  };
+}

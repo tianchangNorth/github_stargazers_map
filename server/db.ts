@@ -1,11 +1,10 @@
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users } from "../drizzle/schema";
+import { InsertUser, users, repositories, countryStats, locationCache, InsertRepository, InsertCountryStat, InsertLocationCache } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
-// Lazily create the drizzle instance so local tooling can run without a DB.
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
     try {
@@ -89,4 +88,70 @@ export async function getUserByOpenId(openId: string) {
   return result.length > 0 ? result[0] : undefined;
 }
 
-// TODO: add feature queries here as your schema grows.
+// Repository queries
+export async function getRepositoryByFullName(fullName: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+
+  const result = await db.select().from(repositories).where(eq(repositories.fullName, fullName)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function createRepository(repo: InsertRepository) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const result = await db.insert(repositories).values(repo);
+  return result;
+}
+
+export async function updateRepository(id: number, updates: Partial<InsertRepository>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db.update(repositories).set(updates).where(eq(repositories.id, id));
+}
+
+// Country stats queries
+export async function getCountryStatsByRepositoryId(repositoryId: number) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return await db.select().from(countryStats).where(eq(countryStats.repositoryId, repositoryId));
+}
+
+export async function createCountryStats(stats: InsertCountryStat[]) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  if (stats.length === 0) return;
+  await db.insert(countryStats).values(stats);
+}
+
+export async function deleteCountryStatsByRepositoryId(repositoryId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db.delete(countryStats).where(eq(countryStats.repositoryId, repositoryId));
+}
+
+// Location cache queries
+export async function getLocationFromCache(locationText: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+
+  const result = await db.select().from(locationCache).where(eq(locationCache.locationText, locationText)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function cacheLocation(location: InsertLocationCache) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db.insert(locationCache).values(location).onDuplicateKeyUpdate({
+    set: {
+      countryCode: location.countryCode,
+      countryName: location.countryName,
+    },
+  });
+}
