@@ -44,7 +44,7 @@ export default function Home() {
 
     setIsAnalyzing(true);
     setAnalysisResult(null);
-    analyzeMutation.mutate({ repoUrl: repoUrl.trim(), maxStargazers: 1000 });
+    analyzeMutation.mutate({ repoUrl: repoUrl.trim(), maxStargazers: 100 });
   };
 
   const mapData: CountryData[] = analysisResult
@@ -124,7 +124,7 @@ export default function Home() {
               <Alert className="border-secondary/50 bg-secondary/10">
                 <AlertCircle className="h-4 w-4 text-secondary" />
                 <AlertDescription className="text-sm text-muted-foreground">
-                  Analysis is limited to 1,000 stargazers for MVP. Results are cached for 24 hours.
+                  Analysis is limited to 100 stargazers for MVP. Results are cached for 24 hours.
                 </AlertDescription>
               </Alert>
             </CardContent>

@@ -57,6 +57,11 @@ async function startServer() {
     console.log(`Port ${preferredPort} is busy, using port ${port} instead`);
   }
 
+  // Increase timeout for long-running requests (e.g., analyzing large repositories)
+  server.timeout = 600000; // 10 minutes
+  server.keepAliveTimeout = 610000; // 10 minutes + 10 seconds
+  server.headersTimeout = 620000; // 10 minutes + 20 seconds
+
   server.listen(port, () => {
     console.log(`Server running on http://localhost:${port}/`);
   });
