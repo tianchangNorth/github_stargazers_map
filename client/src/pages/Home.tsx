@@ -48,9 +48,9 @@ export default function Home() {
   });
 
   const getAnalysisQuery = trpc.stargazers.getAnalysis.useQuery(
-    { fullName: taskStatus?.fullName || '' },
+    { fullName: taskStatus?.fullName || 'placeholder' },
     {
-      enabled: taskStatus?.status === 'completed' && !!taskStatus?.fullName,
+      enabled: taskStatus?.status === 'completed' && !!taskStatus?.fullName && taskStatus.fullName.length > 0,
     }
   );
 
