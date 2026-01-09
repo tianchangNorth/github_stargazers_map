@@ -1,4 +1,4 @@
-import { parseRepoUrl, fetchRepository, fetchStargazers, GitHubUser } from './github';
+import { parseRepoUrl, fetchRepository, fetchStargazers, fetchUserDetail, GitHubUser } from './github';
 import { parseLocationToCountry, CountryInfo } from './geocoding';
 import {
   getRepositoryByFullName,
@@ -101,14 +101,57 @@ export async function analyzeRepository(
   });
 
   const stargazers: GitHubUser[] = [];
+  const stargazerLogins: string[] = [];
+  
+  // First, get the list of stargazer usernames
   for await (const batch of fetchStargazers(owner, repo, targetCount)) {
-    stargazers.push(...batch);
+    stargazerLogins.push(...batch.map(u => u.login));
     onProgress?.({
       stage: 'fetching',
-      processed: stargazers.length,
+      processed: stargazerLogins.length,
       total: targetCount,
-      message: `Fetched ${stargazers.length} of ${targetCount} stargazers...`,
+      message: `Fetched ${stargazerLogins.length} of ${targetCount} stargazers...`,
     });
+  }
+  
+  // Then fetch detailed user info (including location) for each stargazer
+  onProgress?.({
+    stage: 'fetching',
+    processed: 0,
+    total: stargazerLogins.length,
+    message: 'Fetching user details...',
+  });
+  
+  for (let i = 0; i < stargazerLogins.length; i++) {
+    const username = stargazerLogins[i]!;
+    try {
+      const userDetail = await fetchUserDetail(username);
+      stargazers.push({
+        login: userDetail.login,
+        location: userDetail.location,
+      });
+      
+      if ((i + 1) % 10 === 0 || i === stargazerLogins.length - 1) {
+        onProgress?.({
+          stage: 'fetching',
+          processed: i + 1,
+          total: stargazerLogins.length,
+          message: `Fetched details for ${i + 1} of ${stargazerLogins.length} users...`,
+        });
+      }
+      
+      // Rate limiting: wait between requests to avoid hitting GitHub API limits
+      if (i < stargazerLogins.length - 1) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+    } catch (error) {
+      console.error(`Failed to fetch details for ${username}:`, error);
+      // Add user without location if fetch fails
+      stargazers.push({
+        login: username,
+        location: null,
+      });
+    }
   }
 
   // Analyze locations
@@ -176,7 +219,12 @@ export async function analyzeRepository(
     repositoryId = existing.id;
   } else {
     const result = await createRepository(repositoryData);
-    repositoryId = Number((result as any).insertId);
+    // Drizzle ORM returns an array with insertId in the first element for MySQL
+    const insertId = (result as any)[0]?.insertId;
+    if (!insertId) {
+      throw new Error('Failed to get repository ID after insert');
+    }
+    repositoryId = Number(insertId);
   }
 
   const countryStats = Array.from(countryMap.values()).map(country => ({

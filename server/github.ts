@@ -5,6 +5,13 @@ export interface GitHubUser {
   location: string | null;
 }
 
+export interface GitHubUserDetail {
+  login: string;
+  location: string | null;
+  name: string | null;
+  company: string | null;
+}
+
 export interface GitHubRepo {
   full_name: string;
   stargazers_count: number;
@@ -43,6 +50,22 @@ export async function fetchRepository(owner: string, repo: string): Promise<GitH
     },
   });
 
+  return response.data;
+}
+
+/**
+ * Fetch user details including location
+ */
+export async function fetchUserDetail(username: string): Promise<GitHubUserDetail> {
+  const response = await axios.get<GitHubUserDetail>(
+    `${GITHUB_API_BASE}/users/${username}`,
+    {
+      headers: {
+        'Accept': 'application/vnd.github.v3+json',
+        'User-Agent': 'GitHub-Stargazers-Map',
+      },
+    }
+  );
   return response.data;
 }
 
